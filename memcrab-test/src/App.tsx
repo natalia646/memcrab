@@ -1,19 +1,17 @@
 import { useState } from "react";
 import "./App.css";
+import { Input } from "./components/Input";
+import type { Cell } from "./types/Cell.type";
 
-type CellId = number;
-type CellValue = number; // three digit random number
 
-type Cell = {
-  id: CellId;
-  amount: CellValue;
-};
 
 let idCounter = 0;
 
 function App() {
-  const [rows, setRows] = useState<number | null>(null);
-  const [colums, setColums] = useState<number | null>(null);
+  const [rows, setRows] = useState(0);
+  const [colums, setColums] = useState(0);
+
+  const [matrix, setMatrix] = useState<Cell[][]>([]);
 
   const randomAmount = () => Math.floor(100 + Math.random() * 900);
 
@@ -27,31 +25,34 @@ function App() {
       }),
     );
   };
-  const matrix = rows && colums && generateMatrix(rows, colums);
 
   return (
     <div>
-      <input
+      <Input
         placeholder="rows"
         value={rows || ""}
-        min={0}
-        max={10}
         onChange={(event) => {
           const value = +event.target.value;
           setRows(Math.min(100, Math.max(0, value)));
         }}
       />
-      <input
+      <Input
         placeholder="colums"
-        min={0}
-        max={10}
         value={colums || ""}
         onChange={(event) => {
           const value = +event.target.value;
           setColums(Math.min(100, Math.max(0, value)));
         }}
       />
-      {matrix && (
+      <button
+        disabled={!rows && !colums}
+        onClick={() =>
+          rows && colums && setMatrix(generateMatrix(rows, colums))
+        }>
+        Generate matrix
+      </button>
+
+      {!!matrix.length && (
         <table>
           <thead>
             <tr>
@@ -67,12 +68,12 @@ function App() {
               <tr>
                 <th>Cell Value M = {j + 1}</th>
                 {row.map((column) => (
-                  <td key={column.id} onClick={() => column.amount++}>
-                    {column.amount}
-                  </td>
+                  <td key={column.id}>{column.amount}</td>
                 ))}
                 <td>{row.reduce((sum, cell) => sum + cell.amount, 0)}</td>
-                <td><button >- Remove row</button></td>
+                <td>
+                  <button>- Remove row</button>
+                </td>
               </tr>
             ))}
             <tr>
@@ -81,7 +82,13 @@ function App() {
           </tbody>
         </table>
       )}
-      <button className="add-row" onClick={() => setRows((prev) => prev && prev + 1)}>+ Add row</button>
+      <div>
+        <button
+          className="add-row"
+          onClick={() => setRows((prev) => prev && prev + 1)}>
+          + Add row
+        </button>
+      </div>
     </div>
   );
 }
