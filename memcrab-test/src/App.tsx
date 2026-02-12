@@ -1,31 +1,95 @@
 import { useState } from "react";
-import "./App.css";
 import { Input } from "./components/Input";
-import type { Cell } from "./types/Cell.type";
+import type { Column, Row } from "./types/Cell.type";
+import "./App.css";
 
-
-
-let idCounter = 0;
+let idCellCounter = 0;
+let idRowCounter = 0;
 
 function App() {
   const [rows, setRows] = useState(0);
-  const [colums, setColums] = useState(0);
-
-  const [matrix, setMatrix] = useState<Cell[][]>([]);
+  const [columns, setColumns] = useState(0);
+  const [matrix, setMatrix] = useState<Row[]>([]);
 
   const randomAmount = () => Math.floor(100 + Math.random() * 900);
 
-  const generateMatrix = (rowsValue: number, columsValue: number): Cell[][] => {
-    return Array.from({ length: rowsValue }, () =>
-      Array.from({ length: columsValue }, () => {
-        return {
-          id: idCounter++,
-          amount: randomAmount(),
-        };
-      }),
+  const generateRow = (): Row => ({
+    id: idRowCounter++,
+    cells: Array.from({ length: columns }, () => ({
+      id: idCellCounter++,
+      amount: randomAmount(),
+    })),
+  });
+
+  const generateMatrix = () => {
+    if (rows && columns) {
+      idCellCounter = 0;
+      idRowCounter = 0;
+      setMatrix(Array.from({ length: rows }, generateRow));
+    }
+  };
+
+  const addRow = () => {
+    if (!matrix.length) return;
+
+    const newRow = generateRow();
+    setRows((prev) => prev + 1);
+    setMatrix((prev) => [...prev, newRow]);
+  };
+
+  const removeRow = (id: number) => {
+    if (!matrix.length) return;
+
+    const deletedRow = matrix.find((row) => row.id === id);
+
+    setMatrix((prev) => prev.filter((row) => row.id !== deletedRow?.id));
+    setRows((prev) => prev - 1);
+  };
+
+  const incrementCell = (rowId: number, cellId: number) => {
+    setMatrix((prev) =>
+      prev.map((row) =>
+        rowId === row.id
+          ? {
+              ...row,
+              cells: row.cells.map((cell) =>
+                cell.id === cellId
+                  ? { ...cell, amount: cell.amount + 1 }
+                  : cell,
+              ),
+            }
+          : row,
+      ),
     );
   };
 
+  const buildColumns = (matrix: Row[]): Column[] => {
+    if (!matrix.length) return [];
+
+    return matrix[0].cells.map((_, colIndex) => ({
+      id: colIndex,
+      cells: matrix.map(({ cells }) => cells[colIndex].amount),
+    }));
+  };
+
+  const getPercentile = (values: number[], percentile: number) => {
+    if (!values.length) return 0;
+
+    const sorted = [...values].sort((a, b) => a - b);
+    const pos = (sorted.length - 1) * percentile;
+    const lower = Math.floor(pos);
+    const upper = Math.ceil(pos);
+
+    if (lower === upper) return sorted[lower];
+
+    return sorted[lower] + (sorted[upper] - sorted[lower]) * (pos - lower);
+  };
+
+  const columnsValue = buildColumns(matrix);
+
+  const percentileRow = columnsValue.map((col) =>
+    getPercentile(col.cells, 0.6),
+  );
   return (
     <div>
       <Input
@@ -38,57 +102,62 @@ function App() {
       />
       <Input
         placeholder="colums"
-        value={colums || ""}
+        value={columns || ""}
         onChange={(event) => {
           const value = +event.target.value;
-          setColums(Math.min(100, Math.max(0, value)));
+          setColumns(Math.min(100, Math.max(0, value)));
         }}
       />
-      <button
-        disabled={!rows && !colums}
-        onClick={() =>
-          rows && colums && setMatrix(generateMatrix(rows, colums))
-        }>
+      <button disabled={!rows && !columns} onClick={generateMatrix}>
         Generate matrix
       </button>
+
+      <div>
+        {!!matrix.length && (
+          <button className="add-row" onClick={addRow}>
+            + Add row
+          </button>
+        )}
+      </div>
 
       {!!matrix.length && (
         <table>
           <thead>
             <tr>
               <th scope="col"></th>
-              {Array.from({ length: colums }, (_, i) => (
+              {Array.from({ length: matrix[0].cells.length }, (_, i) => (
                 <th scope="col">Cell Values N = {i + 1}</th>
               ))}
               <th>Sum values</th>
             </tr>
           </thead>
           <tbody>
-            {matrix.map((row, j) => (
+            {matrix.map(({ cells, id }, j) => (
               <tr>
-                <th>Cell Value M = {j + 1}</th>
-                {row.map((column) => (
-                  <td key={column.id}>{column.amount}</td>
+                <th key={id}>Cell Value M = {j + 1}</th>
+                {cells.map((cell) => (
+                  <td
+                    key={cell.id}
+                    onClick={() => incrementCell(id, cell.id)}>
+                    {cell.amount}
+                  </td>
                 ))}
-                <td>{row.reduce((sum, cell) => sum + cell.amount, 0)}</td>
+                <td>{cells.reduce((sum, cell) => sum + cell.amount, 0)}</td>
                 <td>
-                  <button>- Remove row</button>
+                  <button onClick={() => removeRow(id)}>- Remove row</button>
                 </td>
               </tr>
             ))}
             <tr>
               <th>60th percentile</th>
+              {percentileRow.map((cell) => (
+                <td key={cell}>{cell.toFixed(1)}</td>
+              ))}
             </tr>
           </tbody>
         </table>
       )}
-      <div>
-        <button
-          className="add-row"
-          onClick={() => setRows((prev) => prev && prev + 1)}>
-          + Add row
-        </button>
-      </div>
+      <div></div>
     </div>
   );
 }

@@ -2,3 +2,8 @@
 .add-row{
   cursor: pointer;
 }
+td{
+  border: 1px solid black;
+  text-align: center;
+  cursor: pointer;
+}
