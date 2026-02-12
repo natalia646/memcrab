@@ -1,15 +1,21 @@
 import { useState } from "react";
 import { Input } from "./components/Input";
-import type { Column, Row } from "./types/Cell.type";
+import type { InputValues, Row } from "./types/Cell.type";
 import "./App.css";
 
 let idCellCounter = 0;
 let idRowCounter = 0;
+const initInputValues = {
+  rows: 0,
+  columns: 0,
+  nearestValue: 0,
+};
 
 function App() {
-  const [rows, setRows] = useState(0);
-  const [columns, setColumns] = useState(0);
+  const [inputValues, setInputValues] = useState<InputValues>(initInputValues);
   const [matrix, setMatrix] = useState<Row[]>([]);
+
+  const { rows, columns, nearestValue } = inputValues;
 
   const randomAmount = () => Math.floor(100 + Math.random() * 900);
 
@@ -33,7 +39,7 @@ function App() {
     if (!matrix.length) return;
 
     const newRow = generateRow();
-    setRows((prev) => prev + 1);
+    setInputValues((prev) => ({ ...prev, rows: prev.rows + 1 }));
     setMatrix((prev) => [...prev, newRow]);
   };
 
@@ -43,7 +49,7 @@ function App() {
     const deletedRow = matrix.find((row) => row.id === id);
 
     setMatrix((prev) => prev.filter((row) => row.id !== deletedRow?.id));
-    setRows((prev) => prev - 1);
+    setInputValues((prev) => ({ ...prev, rows: prev.rows - 1 }));
   };
 
   const incrementCell = (rowId: number, cellId: number) => {
@@ -63,13 +69,12 @@ function App() {
     );
   };
 
-  const buildColumns = (matrix: Row[]): Column[] => {
+  const buildColumns = (matrix: Row[]): number[][] => {
     if (!matrix.length) return [];
 
-    return matrix[0].cells.map((_, colIndex) => ({
-      id: colIndex,
-      cells: matrix.map(({ cells }) => cells[colIndex].amount),
-    }));
+    return matrix[0].cells.map((_, colIndex) =>
+      matrix.map((row) => row.cells[colIndex].amount),
+    );
   };
 
   const getPercentile = (values: number[], percentile: number) => {
@@ -87,9 +92,7 @@ function App() {
 
   const columnsValue = buildColumns(matrix);
 
-  const percentileRow = columnsValue.map((col) =>
-    getPercentile(col.cells, 0.6),
-  );
+  const percentileRow = columnsValue.map((col) => getPercentile(col, 0.6));
   return (
     <div>
       <Input
@@ -97,7 +100,10 @@ function App() {
         value={rows || ""}
         onChange={(event) => {
           const value = +event.target.value;
-          setRows(Math.min(100, Math.max(0, value)));
+          setInputValues((prev) => ({
+            ...prev,
+            rows: Math.min(100, Math.max(0, value)),
+          }));
         }}
       />
       <Input
@@ -105,7 +111,21 @@ function App() {
         value={columns || ""}
         onChange={(event) => {
           const value = +event.target.value;
-          setColumns(Math.min(100, Math.max(0, value)));
+          setInputValues((prev) => ({
+            ...prev,
+            columns: Math.min(100, Math.max(0, value)),
+          }));
+        }}
+      />
+      <Input
+        placeholder="x"
+        value={nearestValue || ""}
+        onChange={(event) => {
+          const value = +event.target.value;
+          setInputValues((prev) => ({
+            ...prev,
+            nearestValue: Math.min(rows * columns, Math.max(0, value)),
+          }));
         }}
       />
       <button disabled={!rows && !columns} onClick={generateMatrix}>
@@ -136,9 +156,7 @@ function App() {
               <tr>
                 <th key={id}>Cell Value M = {j + 1}</th>
                 {cells.map((cell) => (
-                  <td
-                    key={cell.id}
-                    onClick={() => incrementCell(id, cell.id)}>
+                  <td key={cell.id} onClick={() => incrementCell(id, cell.id)}>
                     {cell.amount}
                   </td>
                 ))}

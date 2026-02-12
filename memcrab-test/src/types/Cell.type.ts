@@ -11,7 +11,9 @@ export interface Row {
   cells: Cell[];
 }
 
-export interface Column {
-  id: CellId;
-  cells: CellValue[];
-}
+
+export type InputValues = {
+  rows: CellValue;
+  columns: CellValue;
+  nearestValue: CellValue;
+};
