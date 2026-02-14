@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Input } from "./components/Input";
-import type { InputValues, Row } from "./types/Cell.type";
+import type { Cell, InputValues, Row } from "./types/Cell.type";
 import "./App.css";
+import cn from "classnames";
 
 let idCellCounter = 0;
 let idRowCounter = 0;
@@ -14,6 +15,8 @@ const initInputValues = {
 function App() {
   const [inputValues, setInputValues] = useState<InputValues>(initInputValues);
   const [matrix, setMatrix] = useState<Row[]>([]);
+  const [highlightedIds, setHighlightedIds] = useState<number[]>([]);
+  const [percentedRowId, setPercentedRowId] = useState<number | null>(null);
 
   const { rows, columns, nearestValue } = inputValues;
 
@@ -93,6 +96,38 @@ function App() {
   const columnsValue = buildColumns(matrix);
 
   const percentileRow = columnsValue.map((col) => getPercentile(col, 0.6));
+
+  const allCells = matrix.flatMap((row) => row.cells);
+
+  const highlightNearest = (
+    hoveredCell: Cell,
+    cells: Cell[],
+    highlightValue: number,
+  ) => {
+    const nearestCell = cells
+      .map((cell) => ({
+        ...cell,
+        distance: Math.abs(cell.amount - hoveredCell.amount),
+      }))
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, highlightValue)
+      .map((cell) => cell.id);
+
+    return nearestCell;
+  };
+
+  const calculateRowSum = (cells: Cell[]) =>
+    cells.reduce((sum, cell) => sum + cell.amount, 0);
+
+  const calculateRowPercent = (cells: Cell[]) => {
+    const sum = calculateRowSum(cells);
+
+    return cells.map((cell) => ({
+      ...cell,
+      percent: Math.round((cell.amount / sum) * 100),
+    }));
+  };
+
   return (
     <div>
       <Input
@@ -142,7 +177,7 @@ function App() {
 
       {!!matrix.length && (
         <table>
-          <thead>
+          {/* <thead>
             <tr>
               <th scope="col"></th>
               {Array.from({ length: matrix[0].cells.length }, (_, i) => (
@@ -150,24 +185,52 @@ function App() {
               ))}
               <th>Sum values</th>
             </tr>
-          </thead>
+          </thead> */}
           <tbody>
-            {matrix.map(({ cells, id }, j) => (
+            {matrix.map(({ cells, id }) => (
               <tr>
-                <th key={id}>Cell Value M = {j + 1}</th>
-                {cells.map((cell) => (
-                  <td key={cell.id} onClick={() => incrementCell(id, cell.id)}>
-                    {cell.amount}
+                {/* <th key={id}>Cell Value M = {j + 1}</th> */}
+                {(percentedRowId === id
+                  ? calculateRowPercent(cells)
+                  : cells
+                ).map((cell) => (
+                  <td
+                    key={cell.id}
+                    onMouseEnter={() => {
+                      const ids = highlightNearest(
+                        cell,
+                        allCells,
+                        nearestValue,
+                      );
+                      setHighlightedIds(ids);
+                    }}
+                    onMouseLeave={() => setHighlightedIds([])}
+                    className={cn({
+                      "cell-hover": highlightedIds.includes(cell.id),
+                      percent: percentedRowId === id,
+                    })}
+                    style={{
+                      background:
+                        percentedRowId === id
+                          ? `hsl(0, 100%, ${100 - (cell.percent ?? 0)}%)`
+                          : undefined,
+                    }}
+                    onClick={() => incrementCell(id, cell.id)}>
+                    {percentedRowId === id ? `${cell.percent}%` : cell.amount}
                   </td>
                 ))}
-                <td>{cells.reduce((sum, cell) => sum + cell.amount, 0)}</td>
+                <td
+                  onMouseEnter={() => setPercentedRowId(id)}
+                  onMouseLeave={() => setPercentedRowId(null)}>
+                  {calculateRowSum(cells)}
+                </td>
                 <td>
                   <button onClick={() => removeRow(id)}>- Remove row</button>
                 </td>
               </tr>
             ))}
             <tr>
-              <th>60th percentile</th>
+              {/* <th>60th percentile</th> */}
               {percentileRow.map((cell) => (
                 <td key={cell}>{cell.toFixed(1)}</td>
               ))}

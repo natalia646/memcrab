@@ -3,7 +3,13 @@
   cursor: pointer;
 }
 td{
-  border: 1px solid black;
+  border: 1px solid rgb(0, 0, 0);
   text-align: center;
   cursor: pointer;
+}
+.cell-hover{
+  background-color: #ffe3c2;
+}
+.percent{
+ font-weight: 800;
 }

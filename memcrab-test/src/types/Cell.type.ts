@@ -8,12 +8,15 @@ export interface Cell {
 
 export interface Row {
   id: number;
-  cells: Cell[];
+  cells: CellWithPersent[];
 }
-
 
 export type InputValues = {
   rows: CellValue;
   columns: CellValue;
   nearestValue: CellValue;
 };
+
+export interface CellWithPersent extends Cell {
+  percent?: CellValue;
+}
